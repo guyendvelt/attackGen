@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/csv.ts","./src/main.tsx","./src/types.ts","./src/components/generatebutton.tsx","./src/components/resultview.tsx","./src/components/scenariogrid.tsx","./src/components/vibebox.tsx"],"version":"5.9.3"}
