@@ -29,7 +29,7 @@ export interface GenerateResult {
 }
 
 export interface GenerateRequest {
-  scenario_ids: string[];
-  os: TargetOS;
+  scenarios: string[];
+  os_profile: TargetOS;
   seed?: number;
 }

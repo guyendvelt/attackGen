@@ -9,7 +9,7 @@ import ResultView from "./components/ResultView";
 export default function App() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [os, setOs] = useState<TargetOS>("windows");
+  const [os, setOs] = useState<TargetOS>("linux");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
@@ -37,10 +37,10 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const res = await generate({ scenario_ids: selectedIds, os });
+      const res = await generate({ scenarios: selectedIds, os_profile: os });
       setResult(res);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }

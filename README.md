@@ -1,42 +1,56 @@
 # Red Team — Attack Generator
 
 Tool for the AI Red vs. Blue Bootcamp. Given a process-level attack scenario, it
-generates a CSV of ~220 process commands (**exactly 20 malicious** + ~200 benign
-noise) plus a written attack story.
-
-> **Phase 1 (current):** full UI + generate→preview→download flow backed by a
-> **mock generator**. The real LLM (Anthropic API) plugs into
-> `backend/generator.py:generate_dataset` next — the API contract and UI stay the same.
+generates a dataset of ~220 process commands (**exactly 20 malicious** + ~200 benign
+noise) with columns `process_name, command_line, label`, plus a written attack story.
 
 ## Stack
-- **Backend:** FastAPI (`backend/`)
-- **Frontend:** React + Vite + TypeScript + Tailwind (`frontend/`)
+- **Database:** PostgreSQL — the `command_lines` pool (`sql/schema.sql` + `sql/seed_sample_commands.sql`)
+- **Backend:** Python `attackgen/` composer + **FastAPI** HTTP layer (`api.py`, port 8000)
+- **Frontend:** React + Vite + TypeScript + Tailwind (`frontend/`, port 5173)
 
-## Run
+## ▶️ One-click run
 
-**Backend** (port 8000):
+Double-click **`run.command`** (or `./run.command` in a terminal). It starts all three
+tiers, seeds the DB if needed, and prints where each is running:
+
+```
+🗄  Database  postgresql://attackgen:changeme@localhost:5432/attackgen
+⚙  Backend   http://localhost:8000   (API docs: http://localhost:8000/docs)
+🎨  Frontend  http://localhost:5173   ← open this
+```
+
+It uses a local PostgreSQL on `:5432` if one is running, otherwise `docker compose up`.
+Python deps are isolated in a `.venv`. Press **Ctrl+C** (or close the window) to stop everything.
+
+## Manual run
+
 ```bash
-cd backend
+# 1. Database (Docker)
+docker compose up -d
+
+# 2. Backend
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python3 -m uvicorn main:app --reload --port 8000
-```
+export DATABASE_URL="postgresql://attackgen:changeme@localhost:5432/attackgen"
+uvicorn api:app --reload --port 8000
 
-**Frontend** (port 5173, proxies `/api` → backend):
-```bash
-cd frontend
-npm install
-npm run dev
+# 3. Frontend (proxies /api → :8000)
+cd frontend && npm install && npm run dev
 ```
-Open http://localhost:5173.
 
 ## Use
-1. Pick an attack scenario card (or type a free-text scenario in **Vibe Generate**).
-2. Choose target OS (Windows / Linux).
-3. **Generate Attack** → review the story, stats, and dataset preview.
-4. Download: **labeled CSV**, **scored CSV** (no label column, for the Blue team),
-   or the **ground-truth list** of the 20 malicious commands.
+1. Select one or more **attack methods** (cards).
+2. Choose target OS (**Linux** — the sample DB is Linux-only for now).
+3. **Generate Attack** → review the story, stats, and dataset table.
+4. Download the labeled / scored / ground-truth CSVs.
 
 ## API
-- `GET /api/scenarios` → preset scenario cards
-- `POST /api/generate` `{ scenario_id?, vibe?, os, seed? }` →
-  `{ story, rows[{process_name,command_line,label}], malicious[{process_name,command_line}] }`
+- `GET  /api/health` → `{ status, db }`
+- `GET  /api/scenarios` → scenario cards
+- `POST /api/generate` `{ scenarios: string[], os_profile: "linux"|"windows", seed? }` →
+  `{ story, scenario, totals, rows[{process_name,command_line,label,attack_type}], malicious[...] }`
+  — exactly 20 malicious + 200 benign, blended.
+
+> `attack_type` is for UI display only; it (and `label`) are stripped from the Blue team's scored CSV.
+> See `INTEGRATION.md` for the full architecture and integration details.

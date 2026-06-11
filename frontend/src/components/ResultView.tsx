@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BookOpen, Download, Eye, EyeOff, FileText, ListChecks } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { GenerateResult } from "../types";
 import { downloadText, toGroundTruthCsv, toLabeledCsv, toScoredCsv } from "../csv";
 
@@ -39,7 +41,19 @@ export default function ResultView({ result, scenarioLabel }: Props) {
           <BookOpen size={16} />
           Attack Story — {scenarioLabel}
         </div>
-        <p className="text-sm leading-relaxed text-gray-300">{result.story}</p>
+        <div
+          className="scrollbar-thin max-h-[460px] overflow-auto pr-1
+                     prose prose-invert prose-sm max-w-none
+                     prose-headings:text-rose-200 prose-headings:font-semibold
+                     prose-h1:text-base prose-h2:text-sm prose-h3:text-sm
+                     prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white
+                     prose-code:text-amber-300 prose-code:bg-black/40 prose-code:rounded
+                     prose-code:px-1 prose-code:py-0.5 prose-code:before:content-none
+                     prose-code:after:content-none prose-pre:bg-black/40
+                     prose-pre:whitespace-pre-wrap prose-a:text-fuchsia-300"
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.story}</ReactMarkdown>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {Object.entries(breakdown).map(([type, count]) => (
             <span

@@ -7,12 +7,14 @@ export async function fetchScenarios(): Promise<Scenario[]> {
 }
 
 export async function generate(req: GenerateRequest): Promise<GenerateResult> {
-  const params = new URLSearchParams();
-  req.scenario_ids.forEach((id) => params.append("scenario_ids", id));
-  params.set("os", req.os);
-  if (req.seed !== undefined) params.set("seed", String(req.seed));
-
-  const res = await fetch(`/api/generate?${params.toString()}`);
-  if (!res.ok) throw new Error(`generate failed: ${res.status}`);
+  const res = await fetch("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail?.detail ?? `generate failed: ${res.status}`);
+  }
   return res.json();
 }
