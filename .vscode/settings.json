@@ -1,0 +1,15 @@
+{
+  "sqltools.connections": [
+    {
+      "name": "attackgen (local Postgres)",
+      "driver": "PostgreSQL",
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "database": "attackgen",
+      "username": "iddocohen",
+      "askForPassword": false,
+      "connectionTimeout": 30
+    }
+  ]
+}

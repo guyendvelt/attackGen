@@ -38,6 +38,7 @@ class Request:
     malicious_categories: dict[str, int]
     seed: int | None = None
     output_dir: str = "outputs"
+    attack_type: str | None = None
 
     @property
     def benign_total(self) -> int:
@@ -58,9 +59,40 @@ class Dataset:
 
 
 def load_request(path: str) -> Request:
-    """Load and parse a request JSON file into a ``Request``."""
+    """Load and parse a request JSON file into a ``Request``.
+
+    Two request shapes are accepted:
+
+    * **attack_type mode** — a compact request naming a single ``attack_type``; it
+      expands to one benign category and one malicious category drawing the full
+      ``BENIGN_TOTAL`` / ``MALICIOUS_TOTAL`` split for that attack_type::
+
+          {"scenario": "...", "attack_type": "ransomware", "os_profile": "linux"}
+
+    * **category mode** — explicit ``benign_categories`` / ``malicious_categories``
+      dicts whose values total 200 / 20 (the original contract).
+    """
     with open(path, "r", encoding="utf-8") as handle:
         data = json.load(handle)
+
+    # attack_type mode: expand to single-category counts for the existing pipeline.
+    if "attack_type" in data and "benign_categories" not in data and "malicious_categories" not in data:
+        required = ("scenario", "os_profile", "attack_type")
+        missing = [k for k in required if k not in data]
+        if missing:
+            raise RequestValidationError(
+                f"attack_type request is missing required field(s): {', '.join(missing)}"
+            )
+        attack_type = data["attack_type"]
+        return Request(
+            scenario=data["scenario"],
+            os_profile=data["os_profile"],
+            benign_categories={attack_type: BENIGN_TOTAL},
+            malicious_categories={attack_type: MALICIOUS_TOTAL},
+            seed=data.get("seed"),
+            output_dir=data.get("output_dir", "outputs"),
+            attack_type=attack_type,
+        )
 
     required = ("scenario", "os_profile", "benign_categories", "malicious_categories")
     missing = [k for k in required if k not in data]
@@ -76,6 +108,7 @@ def load_request(path: str) -> Request:
         malicious_categories=dict(data["malicious_categories"]),
         seed=data.get("seed"),
         output_dir=data.get("output_dir", "outputs"),
+        attack_type=data.get("attack_type"),
     )
 
 

@@ -6,10 +6,14 @@ composer. Two implementations are provided:
 * ``InMemoryCommandSource`` — used by tests and offline/demo runs.
 * ``PostgresCommandSource`` — pulls rows from the ``command_lines`` table using
   parameterized SQL only. Credentials come from configuration, never code.
+* ``CommandPoolSource`` — pulls rows from the live ``command_pool`` table keyed on
+  ``attack_type``, selecting a fresh draw per run with ``ORDER BY RANDOM()``.
 
-Selection is performed in Python with a seeded RNG so that, given a seed, the
-chosen rows are deterministic regardless of database row ordering. Rows are
-treated strictly as text; nothing here executes a command line.
+For ``PostgresCommandSource`` selection is performed in Python with a seeded RNG so
+that, given a seed, the chosen rows are deterministic regardless of database row
+ordering. ``CommandPoolSource`` selects in SQL (``ORDER BY RANDOM() LIMIT n``) for a
+fresh variant each run, made reproducible by ``setseed`` when a seed is supplied.
+Rows are treated strictly as text; nothing here executes a command line.
 """
 
 from __future__ import annotations
@@ -245,3 +249,76 @@ class PostgresCommandSource(CommandSource):
             allow_replacement=allow_replacement,
             salt=f"{label}:{category}:{os_profile}",
         )
+
+
+class CommandPoolSource(PostgresCommandSource):
+    """PostgreSQL source backed by the live ``command_pool`` table.
+
+    ``command_pool`` has the flat schema ``(id, process_name, command_line, label,
+    attack_type)``. The composer calls :meth:`fetch` with the ``category`` argument
+    carrying the requested ``attack_type``; selection happens in SQL via
+    ``ORDER BY RANDOM() LIMIT count`` so each run produces a fresh challenge variant.
+    Passing a ``seed`` calls ``setseed`` first to make the draw reproducible.
+    Parameterized SQL only; ``os_profile``/``scenario_tags`` are not columns here and
+    are not used for filtering.
+    """
+
+    TABLE = "command_pool"
+    _POOL_COLUMNS = ("id", "process_name", "command_line", "label", "attack_type")
+
+    @staticmethod
+    def _normalize_seed(seed: int) -> float:
+        # ``setseed`` requires a double in [-1, 1]; map any int there, stably.
+        return ((int(seed) % 1999) - 999) / 1000.0
+
+    def _pool_to_row(self, record: Sequence, *, os_profile: str | None) -> CommandRow:
+        data = dict(zip(self._POOL_COLUMNS, record))
+        return CommandRow(
+            id=data.get("id"),
+            process_name=data["process_name"],
+            command_line=data["command_line"],
+            label=data["label"],
+            category=data["attack_type"],  # attack_type is the selection key here
+            os_profile=os_profile or "linux",
+            scenario_tags=[],
+        )
+
+    def fetch(
+        self,
+        *,
+        label,
+        category,
+        os_profile,
+        count,
+        scenario_tags=None,
+        seed=None,
+        allow_replacement=False,
+    ) -> list[CommandRow]:
+        attack_type = category  # composer passes the attack_type as ``category``
+        conn = self.connect()
+        columns = ", ".join(self._POOL_COLUMNS)
+        sql = (
+            f"SELECT {columns} FROM {self.TABLE} "
+            f"WHERE label = %s AND attack_type = %s "
+            f"ORDER BY RANDOM() LIMIT %s"
+        )
+        params = (label, attack_type, count)
+
+        try:
+            with conn.cursor() as cur:
+                if seed is not None:
+                    cur.execute("SELECT setseed(%s)", (self._normalize_seed(seed),))
+                cur.execute(sql, params)
+                records = cur.fetchall()
+        except Exception as exc:  # noqa: BLE001
+            raise CommandSourceError(
+                f"query failed for attack_type {attack_type!r} ({label}): {exc}"
+            ) from exc
+
+        rows = [self._pool_to_row(r, os_profile=os_profile) for r in records]
+        if len(rows) < count and not allow_replacement:
+            raise InsufficientCommandsError(
+                f"attack_type {attack_type!r} ({label}) has {len(rows)} commands "
+                f"in {self.TABLE} but {count} were requested"
+            )
+        return rows

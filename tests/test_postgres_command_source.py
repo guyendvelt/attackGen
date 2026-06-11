@@ -11,6 +11,7 @@ import pytest
 from attackgen.config import DbConfig
 from attackgen.models import CommandRow
 from attackgen.postgres_command_source import (
+    CommandPoolSource,
     CommandSourceError,
     InMemoryCommandSource,
     InsufficientCommandsError,
@@ -156,3 +157,65 @@ def test_postgres_connection_failure_is_clear():
                                 connect=boom)
     with pytest.raises(CommandSourceError, match="connect"):
         src.fetch(label="benign", category="backup", os_profile="linux", count=1)
+
+
+# --- CommandPoolSource (live command_pool table, fake connection) -----------
+
+def pool_tuple(i, label="malicious", attack_type="ransomware"):
+    # command_pool column order: id, process_name, command_line, label, attack_type
+    return (i, "reg.exe", f"reg save HKLM\\SAM out{i}", label, attack_type)
+
+
+def test_command_pool_uses_parameterized_random_query():
+    rows = [pool_tuple(i) for i in range(20)]
+    conn = FakeConnection(rows)
+    src = CommandPoolSource(DbConfig.from_url("postgresql://u:p@h:5432/d"),
+                            connect=lambda cfg: conn)
+
+    src.fetch(label="malicious", category="ransomware", os_profile="linux", count=20)
+
+    sql, params = conn._cursor.executed[-1]
+    assert "%s" in sql
+    assert "command_pool" in sql
+    assert "ORDER BY RANDOM()" in sql
+    assert "LIMIT %s" in sql
+    # Values travel as parameters, never baked into the SQL string.
+    assert "ransomware" not in sql
+    assert "malicious" not in sql
+    assert params == ("malicious", "ransomware", 20)
+
+
+def test_command_pool_maps_attack_type_to_category():
+    rows = [pool_tuple(i, label="benign", attack_type="reverse_shell") for i in range(5)]
+    conn = FakeConnection(rows)
+    src = CommandPoolSource(DbConfig.from_url("postgresql://u:p@h:5432/d"),
+                            connect=lambda cfg: conn)
+
+    result = src.fetch(label="benign", category="reverse_shell", os_profile="linux", count=5)
+
+    assert len(result) == 5
+    assert all(isinstance(r, CommandRow) for r in result)
+    assert all(r.category == "reverse_shell" and r.label == "benign" for r in result)
+    assert all(r.os_profile == "linux" for r in result)
+
+
+def test_command_pool_seed_calls_setseed_in_range():
+    rows = [pool_tuple(i) for i in range(20)]
+    conn = FakeConnection(rows)
+    src = CommandPoolSource(DbConfig.from_url("postgresql://u:p@h:5432/d"),
+                            connect=lambda cfg: conn)
+
+    src.fetch(label="malicious", category="ransomware", os_profile="linux", count=20, seed=42)
+
+    first_sql, first_params = conn._cursor.executed[0]
+    assert "setseed" in first_sql
+    assert -1.0 <= first_params[0] <= 1.0
+
+
+def test_command_pool_insufficient_inventory_raises():
+    rows = [pool_tuple(i) for i in range(3)]
+    conn = FakeConnection(rows)
+    src = CommandPoolSource(DbConfig.from_url("postgresql://u:p@h:5432/d"),
+                            connect=lambda cfg: conn)
+    with pytest.raises(InsufficientCommandsError, match="ransomware"):
+        src.fetch(label="malicious", category="ransomware", os_profile="linux", count=20)

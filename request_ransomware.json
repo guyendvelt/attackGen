@@ -1,0 +1,6 @@
+{
+  "scenario": "ransomware on a Linux web server",
+  "os_profile": "linux",
+  "attack_type": "ransomware",
+  "output_dir": "outputs"
+}

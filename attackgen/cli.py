@@ -20,19 +20,33 @@ from attackgen.config import DbConfig, DbConfigError
 from attackgen.exporters import export_dataset
 from attackgen.models import DatasetValidationError
 from attackgen.postgres_command_source import (
+    CommandPoolSource,
     CommandSourceError,
     PostgresCommandSource,
 )
 
 
 def _postgres_factory(request, args):
-    """Default source factory: build a PostgreSQL-backed source from env/args."""
+    """Default source factory: build a PostgreSQL-backed source from env/args.
+
+    Selects :class:`CommandPoolSource` (the live ``command_pool`` table, keyed on
+    ``attack_type``) when the request is in attack_type mode or ``--table
+    command_pool`` is given; otherwise the original :class:`PostgresCommandSource`
+    (the ``command_lines`` table).
+    """
     if args.database_url:
         config = DbConfig.from_url(args.database_url)
     else:
         config = DbConfig.from_env()
-    source = PostgresCommandSource(config)
-    source_info = {"type": "postgres", **config.redacted()}
+
+    table = getattr(args, "table", None)
+    use_pool = table == "command_pool" or (table is None and getattr(request, "attack_type", None))
+    if use_pool:
+        source = CommandPoolSource(config)
+        source_info = {"type": "postgres", "table": "command_pool", **config.redacted()}
+    else:
+        source = PostgresCommandSource(config)
+        source_info = {"type": "postgres", "table": "command_lines", **config.redacted()}
     return source, source_info
 
 
@@ -57,6 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Seed for deterministic selection and blending (overrides request seed).",
+    )
+    parser.add_argument(
+        "--table",
+        choices=("command_pool", "command_lines"),
+        default=None,
+        help=(
+            "Source table override. Defaults to command_pool for attack_type "
+            "requests and command_lines otherwise."
+        ),
     )
     return parser
 

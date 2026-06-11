@@ -97,6 +97,61 @@ def test_load_request_reads_json(tmp_path):
     assert request.seed == 42
 
 
+# --- attack_type request mode ----------------------------------------------
+
+def build_attack_type_source(attack_type="ransomware", os_profile="linux"):
+    """In-memory source where every row's category is the attack_type."""
+    rows = []
+    cid = 1000
+    for label, n in (("benign", BENIGN_TOTAL + 5), ("malicious", MALICIOUS_TOTAL + 5)):
+        for _ in range(n):
+            rows.append(
+                CommandRow(
+                    process_name=f"proc_{label}",
+                    command_line=f"{attack_type} {label} command {cid}",
+                    label=label,
+                    category=attack_type,
+                    os_profile=os_profile,
+                    scenario_tags=[],
+                    id=cid,
+                )
+            )
+            cid += 1
+    return InMemoryCommandSource(rows)
+
+
+def test_load_request_attack_type_mode_expands_counts(tmp_path):
+    payload = {
+        "scenario": "ransomware on a linux web server",
+        "os_profile": "linux",
+        "attack_type": "ransomware",
+        "seed": 7,
+    }
+    path = tmp_path / "req.json"
+    path.write_text(json.dumps(payload))
+
+    request = load_request(str(path))
+
+    assert request.attack_type == "ransomware"
+    assert request.benign_categories == {"ransomware": BENIGN_TOTAL}
+    assert request.malicious_categories == {"ransomware": MALICIOUS_TOTAL}
+
+
+def test_attack_type_request_composes_220_split():
+    request = Request(
+        scenario="ransomware",
+        os_profile="linux",
+        benign_categories={"ransomware": BENIGN_TOTAL},
+        malicious_categories={"ransomware": MALICIOUS_TOTAL},
+        seed=7,
+        attack_type="ransomware",
+    )
+    dataset = compose(request, build_attack_type_source())
+    assert len(dataset.rows) == TOTAL_ROWS == 220
+    assert sum(r.label == "benign" for r in dataset.rows) == BENIGN_TOTAL
+    assert sum(r.label == "malicious" for r in dataset.rows) == MALICIOUS_TOTAL
+
+
 # --- valid composition -----------------------------------------------------
 
 def test_valid_request_creates_exactly_220_rows():
