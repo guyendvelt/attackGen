@@ -205,7 +205,8 @@ def pick_dataset(
     ben_target: int = BENIGN_TARGET,
 ) -> Optional[dict]:
     """Return {story, malicious: [rows], benign: [rows]} or None on any failure."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key or key.startswith("sk-ant-REPLACE"):
         return None
     try:
         pool = _get_pool()

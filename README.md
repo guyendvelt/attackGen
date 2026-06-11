@@ -4,9 +4,21 @@ Tool for the AI Red vs. Blue Bootcamp. Given a process-level attack scenario, it
 generates a CSV of ~220 process commands (**exactly 20 malicious** + ~200 benign
 noise) plus a written attack story.
 
-> **Phase 1 (current):** full UI + generate→preview→download flow backed by a
-> **mock generator**. The real LLM (Anthropic API) plugs into
-> `backend/generator.py:generate_dataset` next — the API contract and UI stay the same.
+> **LLM phase (current):** `generate_dataset` first asks Claude — via the
+> `command-picker` skill — to choose the best commands from the pool
+> (`backend/picker.py`). Set `ANTHROPIC_API_KEY` to enable it; with no key it
+> falls back to the mock generator. The API contract and UI are unchanged.
+
+## Enable the LLM picker
+
+1. Copy the env template: `cp .env.example .env`
+2. Paste your key into `.env`: `ANTHROPIC_API_KEY=sk-ant-...`
+   (get one at https://platform.claude.com → API Keys; `.env` is gitignored)
+3. Restart the backend. `POST /api/generate` now picks commands with
+   `claude-opus-4-8` driven by `.claude/skills/command-picker/SKILL.md`.
+
+Without a key (or with the `sk-ant-REPLACE_ME` placeholder) the backend logs a
+fallback notice and serves the mock dataset — the demo never fails.
 
 ## Stack
 - **Backend:** FastAPI (`backend/`)
