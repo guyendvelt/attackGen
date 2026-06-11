@@ -4,6 +4,12 @@ Tool for the AI Red vs. Blue Bootcamp. Given a process-level attack scenario, it
 generates a dataset of ~220 process commands (**exactly 20 malicious** + ~200 benign
 noise) with columns `process_name, command_line, label`, plus a written attack story.
 
+> **Two skills drive generation (both via Azure OpenAI):** the `command-picker`
+> skill selects the best 20 malicious + 200 benign commands from the pool and orders
+> them into an attack, and the `attack-story-writer` skill writes the narrative.
+> Both live in `.claude/skills/`. With no LLM key configured, generation falls back
+> to the deterministic composer/template — the demo never fails.
+
 ## Stack
 - **Database:** PostgreSQL — the `command_lines` pool (`sql/schema.sql` + `sql/seed_sample_commands.sql`)
 - **Backend:** Python `attackgen/` composer + **FastAPI** HTTP layer (`api.py`, port 8000)
