@@ -3,6 +3,10 @@
 Run:  uvicorn api:app --reload --port 8000
 """
 from __future__ import annotations
+import os
+import random
+import sys
+from types import SimpleNamespace
 from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -17,6 +21,10 @@ from attackgen.postgres_command_source import (
 )
 from scenario_profiles import build_categories
 from story import generate_story
+
+# The command-picker (LLM, skill-driven) lives under backend/.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+import picker  # noqa: E402
 
 app = FastAPI(title="AttackGen API", version="1.0.0")
 
@@ -76,6 +84,73 @@ def scenarios():
     return SCENARIOS
 
 
+def _blend(malicious: list, benign: list, seed: Optional[int]) -> list:
+    """Spread malicious rows evenly across benign rows (preserving story order)."""
+    rng = random.Random(f"{seed}:blend") if seed is not None else random.Random()
+    benign = list(benign)
+    rng.shuffle(benign)
+    total, m = len(benign) + len(malicious), len(malicious)
+    positions: list[int] = []
+    used: set[int] = set()
+    for i in range(m):
+        start, end = (i * total) // m, ((i + 1) * total) // m
+        if end <= start:
+            end = start + 1
+        pos = rng.randrange(start, end)
+        while pos in used:
+            pos = (pos + 1) % total
+        used.add(pos)
+        positions.append(pos)
+    mal_by_pos = dict(zip(sorted(positions), malicious))  # story order across positions
+    out, bi = [], iter(benign)
+    for pos in range(total):
+        out.append(mal_by_pos[pos] if pos in mal_by_pos else next(bi))
+    return out
+
+
+def _shim_dataset(mal: list, ben: list, scenario: str, os_profile: str):
+    """Adapt picker dict-rows into the object shape story.generate_story expects."""
+    def row(d):
+        return SimpleNamespace(
+            process_name=d["process_name"], command_line=d["command_line"],
+            label=d["label"], category=d.get("attack_type", "benign"),
+        )
+    mal_o, ben_o = [row(d) for d in mal], [row(d) for d in ben]
+    return SimpleNamespace(
+        rows=mal_o + ben_o, benign_rows=ben_o, malicious_rows=mal_o,
+        request=SimpleNamespace(scenario=scenario, os_profile=os_profile),
+    )
+
+
+def _picker_response(picked: dict, scenarios: list, os_profile: str, seed: Optional[int]) -> dict:
+    """Build the API response from a command-picker result (+ attack-story-writer)."""
+    mal, ben = picked["malicious"], picked["benign"]
+    scenario = scenarios[0] if len(scenarios) == 1 else " + ".join(scenarios)
+    rows = _blend(mal, ben, seed)
+    try:
+        story = generate_story(_shim_dataset(mal, ben, scenario, os_profile))
+    except Exception:
+        story = picked.get("story") or "LLM-selected attack dataset."
+    return {
+        "scenario": scenario,
+        "os_profile": os_profile,
+        "seed": seed,
+        "source": "command-picker",
+        "totals": {"benign": len(ben), "malicious": len(mal), "total": len(rows)},
+        "story": story,
+        "rows": [
+            {"process_name": r["process_name"], "command_line": r["command_line"],
+             "label": r["label"], "attack_type": r.get("attack_type", "benign")}
+            for r in rows
+        ],
+        "malicious": [
+            {"process_name": r["process_name"], "command_line": r["command_line"],
+             "attack_type": r.get("attack_type", "")}
+            for r in mal
+        ],
+    }
+
+
 @app.post("/api/generate")
 def generate(req: GenerateRequest):
     # 1) Resolve category counts: explicit (advanced) or mapped from scenarios.
@@ -85,6 +160,12 @@ def generate(req: GenerateRequest):
     else:
         if not req.scenarios:
             raise HTTPException(status_code=400, detail="provide 'scenarios' or explicit category counts")
+        # PRIMARY PATH: the command-picker skill (LLM) selects commands from the
+        # 30k-row pool (data/template2.csv). Returns None if no LLM key / failure,
+        # in which case we fall through to the deterministic Postgres composer.
+        picked = picker.pick_dataset(req.scenarios, req.os_profile, seed=req.seed)
+        if picked is not None:
+            return _picker_response(picked, req.scenarios, req.os_profile, req.seed)
         benign, malicious, scenario = build_categories(req.scenarios)
 
     # NOTE: PostgresCommandSource treats `scenario` as a HARD SQL tag filter
@@ -125,6 +206,7 @@ def generate(req: GenerateRequest):
         "scenario": dataset.request.scenario,
         "os_profile": dataset.request.os_profile,
         "seed": dataset.seed,
+        "source": "composer",
         "totals": {
             "benign": len(dataset.benign_rows),
             "malicious": len(dataset.malicious_rows),

@@ -158,6 +158,44 @@ def _split_counts(total: int, n: int) -> List[int]:
     return [base + (1 if i < rem else 0) for i in range(n)]
 
 
+def _azure_configured() -> bool:
+    return bool(
+        (os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_MONITORING_KEY"))
+        and os.getenv("AZURE_OPENAI_ENDPOINT")
+    )
+
+
+def _anthropic_configured() -> bool:
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    return bool(key) and not key.startswith("sk-ant-REPLACE")
+
+
+def _llm_configured() -> bool:
+    return _azure_configured() or _anthropic_configured()
+
+
+def _call_azure(system: str, user: str) -> dict:
+    """Structured pick via Azure OpenAI JSON mode. Isolated so tests can stub it."""
+    from openai import AzureOpenAI
+
+    client = AzureOpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_MONITORING_KEY"),
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21"),
+    )
+    resp = client.chat.completions.create(
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        max_tokens=4000,
+        temperature=0.4,
+        response_format={"type": "json_object"},  # SKILL.md asks for "JSON only"
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    )
+    return json.loads(resp.choices[0].message.content)
+
+
 def _call_claude(system: str, user: str, schema: dict) -> dict:
     """One structured-output call. Isolated so tests can stub it."""
     import anthropic
@@ -175,6 +213,13 @@ def _call_claude(system: str, user: str, schema: dict) -> dict:
         raise PickerError("model refused the request")
     text = next(b.text for b in response.content if b.type == "text")
     return json.loads(text)
+
+
+def _call_llm(system: str, user: str, schema: dict) -> dict:
+    """Dispatch the pick to whichever provider is configured (Azure preferred)."""
+    if _azure_configured():
+        return _call_azure(system, user)
+    return _call_claude(system, user, schema)
 
 
 def _build_user_prompt(
@@ -205,8 +250,7 @@ def pick_dataset(
     ben_target: int = BENIGN_TARGET,
 ) -> Optional[dict]:
     """Return {story, malicious: [rows], benign: [rows]} or None on any failure."""
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key or key.startswith("sk-ant-REPLACE"):
+    if not _llm_configured():
         return None
     try:
         pool = _get_pool()
@@ -219,7 +263,7 @@ def pick_dataset(
         )
         system = SKILL_PATH.read_text(encoding="utf-8")
         user = _build_user_prompt(cats, os_name, mal_target, ben_target, candidates)
-        answer = _call_claude(system, user, _SCHEMA)
+        answer = _call_llm(system, user, _SCHEMA)
         mal, ben = finalize_selection(
             answer.get("malicious_ids", []), answer.get("benign_ids", []),
             candidates, mal_target=mal_target, ben_target=ben_target,
