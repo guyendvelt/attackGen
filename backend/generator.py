@@ -16,12 +16,28 @@ keep: swap the internals, leave the return contract untouched.
 """
 
 import random
+import re
 from typing import Dict, List, Optional
 
 import scenarios as S
 
 BENIGN_TARGET = 200
 MALICIOUS_TARGET = 20
+
+# Directory anchors an attacker would plausibly iterate over (encrypt/stage/copy
+# different locations) and data-artifact extensions they'd create many of. Used to
+# vary repeated beats into distinct-but-realistic commands when a scenario has
+# fewer base beats than its allotment.
+_DIR_ANCHORS = [
+    ("C:\\Users", "C:\\Users\\dept{n}"),
+    ("C:\\Finance", "C:\\Finance\\q{n}"),
+    ("C:\\Windows\\Temp\\stage", "C:\\Windows\\Temp\\stage{n}"),
+    ("/srv/finance", "/srv/finance/part{n}"),
+    ("/home", "/home/u{n}"),
+    ("/var/www", "/var/www/site{n}"),
+]
+_ARTIFACT_RE = re.compile(r"([A-Za-z0-9_.\-]+?)\.(tar|tgz|gz|zip|dmp|sav|b64|bin|locked|kdbx|dump)\b")
+_PID_RE = re.compile(r"(MiniDump |pgrep \S+ |-p )(\d{2,5})")
 
 
 def _fill(template: str, rnd: random.Random) -> str:
@@ -34,25 +50,59 @@ def _fill(template: str, rnd: random.Random) -> str:
     )
 
 
-def _vary_malicious(cmd: Dict[str, str], rnd: random.Random) -> Dict[str, str]:
-    """Lightly vary a malicious beat so repeats aren't byte-identical."""
-    cl = cmd["command_line"]
+def _mutate(cl: str, n: int) -> str:
+    """Produce a realistic variation of a command for the n-th repeat.
+
+    Tries, in order: rotate target host / IP, iterate a target directory, index a
+    data artifact filename, bump a PID. Returns the original unchanged if none
+    apply (caller then treats it as unmutable).
+    """
     if "WS-042" in cl:
-        cl = cl.replace("WS-042", rnd.choice(S.HOSTS))
+        return cl.replace("WS-042", S.HOSTS[n % len(S.HOSTS)], 1)
     if "10.0.0.42" in cl:
-        cl = cl.replace("10.0.0.42", rnd.choice(S.IPS))
-    return {"process_name": cmd["process_name"], "command_line": cl}
+        return cl.replace("10.0.0.42", S.IPS[n % len(S.IPS)], 1)
+    for anchor, repl in _DIR_ANCHORS:
+        if anchor in cl:
+            return cl.replace(anchor, repl.format(n=n), 1)
+    m = _ARTIFACT_RE.search(cl)
+    if m:
+        return cl[: m.start()] + f"{m.group(1)}_{n}.{m.group(2)}" + cl[m.end():]
+    m = _PID_RE.search(cl)
+    if m:
+        return cl[: m.start()] + f"{m.group(1)}{int(m.group(2)) + n}" + cl[m.end():]
+    return cl
 
 
 def _expand_beats(
     beats: List[Dict[str, str]], target: int, attack_type: str, rnd: random.Random
 ) -> List[Dict[str, str]]:
-    """Take a scenario's ordered beats and produce exactly `target` rows."""
+    """Take a scenario's ordered beats and produce exactly `target` rows.
+
+    Includes each base beat once (story order), then fills the remainder with
+    realistic, de-duplicated variations. Falls back to padding if a scenario can't
+    yield enough distinct variations (rare; resolved fully in the LLM phase).
+    """
     out: List[Dict[str, str]] = [dict(b) for b in beats[:target]]
+    seen = {b["command_line"] for b in out}
+
+    n, bi, guard = 1, 0, 0
+    while len(out) < target and guard < 5000:
+        guard += 1
+        base = beats[bi % len(beats)]
+        bi += 1
+        cl = _mutate(base["command_line"], n)
+        n += 1
+        if cl in seen:
+            continue
+        seen.add(cl)
+        out.append({"process_name": base["process_name"], "command_line": cl})
+
+    # Last-resort padding if distinct variations were exhausted.
     i = 0
     while len(out) < target:
-        out.append(_vary_malicious(beats[i % len(beats)], rnd))
+        out.append(dict(beats[i % len(beats)]))
         i += 1
+
     out = out[:target]
     for c in out:
         c["label"] = "malicious"
