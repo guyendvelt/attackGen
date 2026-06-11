@@ -135,3 +135,109 @@ def finalize_selection(
     mal = resolve(mal_ids, "malicious", mal_target, used)
     ben = resolve(ben_ids, "benign", ben_target, used)
     return mal, ben
+
+
+MODEL = "claude-opus-4-8"
+MAL_CAND_FACTOR = 3   # candidates per category = factor x per-category target
+BEN_CAND_FACTOR = 2
+
+_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "malicious_ids": {"type": "array", "items": {"type": "integer"}},
+        "benign_ids": {"type": "array", "items": {"type": "integer"}},
+        "story": {"type": "string"},
+    },
+    "required": ["malicious_ids", "benign_ids", "story"],
+    "additionalProperties": False,
+}
+
+
+def _split_counts(total: int, n: int) -> List[int]:
+    base, rem = divmod(total, n)
+    return [base + (1 if i < rem else 0) for i in range(n)]
+
+
+def _call_claude(system: str, user: str, schema: dict) -> dict:
+    """One structured-output call. Isolated so tests can stub it."""
+    import anthropic
+
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=16000,
+        thinking={"type": "adaptive"},
+        system=system,
+        messages=[{"role": "user", "content": user}],
+        output_config={"format": {"type": "json_schema", "schema": schema}},
+    )
+    if response.stop_reason == "refusal":
+        raise PickerError("model refused the request")
+    text = next(b.text for b in response.content if b.type == "text")
+    return json.loads(text)
+
+
+def _build_user_prompt(
+    scenario_ids: List[str], os_name: str,
+    mal_target: int, ben_target: int, candidates: List[Dict],
+) -> str:
+    lines = [
+        f"Scenario: {', '.join(scenario_ids)} on a {os_name} host.",
+        f"Pick exactly {mal_target} malicious ids (attack-story order) and "
+        f"exactly {ben_target} benign ids from the candidates below.",
+        "",
+        "Candidates (id | process_name | command_line | label | attack_type):",
+    ]
+    for c in candidates:
+        lines.append(
+            f"{c['id']} | {c['process_name']} | {c['command_line']} | "
+            f"{c['label']} | {c['attack_type']}"
+        )
+    return "\n".join(lines)
+
+
+def pick_dataset(
+    scenario_ids: List[str],
+    os_name: str,
+    seed: Optional[int] = None,
+    *,
+    mal_target: int = MALICIOUS_TARGET,
+    ben_target: int = BENIGN_TARGET,
+) -> Optional[dict]:
+    """Return {story, malicious: [rows], benign: [rows]} or None on any failure."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        pool = _get_pool()
+        cats = [c for c in scenario_ids if c in KNOWN_CATEGORIES] or ["lateral_movement"]
+        rnd = random.Random(seed)
+        mal_per_cat = max(12, MAL_CAND_FACTOR * max(_split_counts(mal_target, len(cats))))
+        ben_per_cat = BEN_CAND_FACTOR * max(_split_counts(ben_target, len(cats)))
+        candidates = sample_candidates(
+            pool, cats, mal_per_cat=mal_per_cat, ben_per_cat=ben_per_cat, rnd=rnd
+        )
+        system = SKILL_PATH.read_text(encoding="utf-8")
+        user = _build_user_prompt(cats, os_name, mal_target, ben_target, candidates)
+        answer = _call_claude(system, user, _SCHEMA)
+        mal, ben = finalize_selection(
+            answer.get("malicious_ids", []), answer.get("benign_ids", []),
+            candidates, mal_target=mal_target, ben_target=ben_target,
+        )
+        story = str(answer.get("story", "")).strip() or "LLM-selected attack dataset."
+
+        def to_row(c: Dict) -> Dict[str, str]:
+            return {
+                "process_name": c["process_name"],
+                "command_line": c["command_line"],
+                "label": c["label"],
+                "attack_type": c["attack_type"] if c["label"] == "malicious" else "benign",
+            }
+
+        return {
+            "story": story,
+            "malicious": [to_row(c) for c in mal],
+            "benign": [to_row(c) for c in ben],
+        }
+    except Exception as exc:  # any failure -> caller falls back to mock
+        print(f"[picker] falling back to mock generator: {exc}")
+        return None

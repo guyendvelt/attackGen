@@ -105,3 +105,44 @@ def test_finalize_raises_when_insufficient():
     cands = _cands(2, 8)
     with pytest.raises(picker.PickerError):
         picker.finalize_selection([1], [3, 4], cands, mal_target=3, ben_target=4)
+
+
+def test_pick_dataset_returns_none_without_api_key(monkeypatch, pool):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(picker, "_get_pool", lambda: pool)
+    assert picker.pick_dataset(["ransomware"], "linux", seed=1) is None
+
+
+def test_pick_dataset_uses_stubbed_claude(monkeypatch, pool):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.setattr(picker, "_get_pool", lambda: pool)
+
+    def fake_call(system, user, schema):
+        cands = picker.sample_candidates(
+            pool, ["ransomware"],
+            mal_per_cat=picker.MAL_CAND_FACTOR * 2,
+            ben_per_cat=picker.BEN_CAND_FACTOR * 3,
+            rnd=random.Random(1),
+        )
+        mal = [c["id"] for c in cands if c["label"] == "malicious"][:2]
+        ben = [c["id"] for c in cands if c["label"] == "benign"][:3]
+        return {"malicious_ids": mal, "benign_ids": ben, "story": "test story"}
+
+    monkeypatch.setattr(picker, "_call_claude", fake_call)
+    result = picker.pick_dataset(["ransomware"], "linux", seed=1,
+                                 mal_target=2, ben_target=3)
+    assert result is not None
+    assert result["story"] == "test story"
+    assert len(result["malicious"]) == 2 and len(result["benign"]) == 3
+    assert all(r["label"] == "malicious" for r in result["malicious"])
+
+
+def test_pick_dataset_none_on_api_error(monkeypatch, pool):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.setattr(picker, "_get_pool", lambda: pool)
+
+    def boom(system, user, schema):
+        raise RuntimeError("api down")
+
+    monkeypatch.setattr(picker, "_call_claude", boom)
+    assert picker.pick_dataset(["ransomware"], "linux", seed=1) is None
