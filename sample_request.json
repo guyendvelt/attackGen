@@ -1,0 +1,22 @@
+{
+  "scenario": "ransomware",
+  "os_profile": "linux",
+  "benign_categories": {
+    "linux_admin": 40,
+    "devops": 35,
+    "logs": 35,
+    "backup": 45,
+    "app_runtime": 25,
+    "package_management": 20
+  },
+  "malicious_categories": {
+    "discovery": 4,
+    "staging": 4,
+    "persistence": 3,
+    "execution": 5,
+    "cleanup": 2,
+    "impact": 2
+  },
+  "seed": 42,
+  "output_dir": "outputs"
+}
