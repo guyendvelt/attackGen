@@ -146,3 +146,34 @@ def test_pick_dataset_none_on_api_error(monkeypatch, pool):
 
     monkeypatch.setattr(picker, "_call_claude", boom)
     assert picker.pick_dataset(["ransomware"], "linux", seed=1) is None
+
+
+def test_generator_falls_back_to_mock_without_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    import generator
+    result = generator.generate_dataset(scenario_ids=["ransomware"],
+                                        os_name="linux", seed=42)
+    mal = [r for r in result["rows"] if r["label"] == "malicious"]
+    ben = [r for r in result["rows"] if r["label"] == "benign"]
+    assert len(mal) == 20 and len(ben) == 200
+    assert result["story"]
+
+
+def test_generator_uses_picker_when_it_returns(monkeypatch):
+    import generator
+    fake = {
+        "story": "picker story",
+        "malicious": [{"process_name": "bash", "command_line": f"m{i}",
+                       "label": "malicious", "attack_type": "ransomware"}
+                      for i in range(20)],
+        "benign": [{"process_name": "bash", "command_line": f"b{i}",
+                    "label": "benign", "attack_type": "benign"}
+                   for i in range(200)],
+    }
+    monkeypatch.setattr(generator.picker, "pick_dataset",
+                        lambda *a, **k: fake)
+    result = generator.generate_dataset(scenario_ids=["ransomware"],
+                                        os_name="linux", seed=42)
+    assert result["story"] == "picker story"
+    assert len(result["rows"]) == 220
+    assert len(result["malicious"]) == 20

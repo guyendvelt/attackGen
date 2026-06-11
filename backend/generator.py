@@ -19,6 +19,7 @@ import random
 import re
 from typing import Dict, List, Optional
 
+import picker
 import scenarios as S
 
 BENIGN_TARGET = 200
@@ -184,6 +185,25 @@ def generate_dataset(
 
     had_presets = bool([s for s in (scenario_ids or []) if s in S.BEATS])
     resolved = _resolve_scenarios(scenario_ids)
+
+    # LLM phase: ask Claude (command-picker skill) for the best commands.
+    # Any failure returns None and we fall through to the mock path below.
+    picked = picker.pick_dataset(resolved, os_name, seed)
+    if picked is not None:
+        rows = picked["malicious"] + picked["benign"]
+        rnd.shuffle(rows)
+        return {
+            "story": picked["story"],
+            "rows": rows,
+            "malicious": [
+                {
+                    "process_name": c["process_name"],
+                    "command_line": c["command_line"],
+                    "attack_type": c["attack_type"],
+                }
+                for c in picked["malicious"]
+            ],
+        }
 
     malicious = _build_malicious(resolved, os_name, rnd)
     benign = _build_benign(os_name, rnd)
