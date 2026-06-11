@@ -1,0 +1,32 @@
+# Local PostgreSQL for AttackGen development ONLY.
+# Uses throwaway sample credentials and SIMULATED placeholder command data.
+# Do not use these values anywhere real.
+#
+#   docker compose up -d
+#   python -m attackgen.cli --request sample_request.json --output-dir outputs
+#
+# The schema and sample seed are applied automatically on first start via the
+# docker-entrypoint-initdb.d hook.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: attackgen-postgres
+    environment:
+      POSTGRES_DB: attackgen
+      POSTGRES_USER: attackgen
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./sql/seed_sample_commands.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+      - attackgen_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attackgen -d attackgen"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  attackgen_pgdata:

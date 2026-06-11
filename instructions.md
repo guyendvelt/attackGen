@@ -193,7 +193,67 @@ These are starting points. The database owner can extend or refine them, as long
 
 ---
 
-## 11. Example Request Shape
+## 11. Supported Attack Categories and Benign Lookalikes
+
+We now have an official initial list of supported Red Team attack categories. **Every attack category must include both:**
+
+1. **Malicious process-command behavior** — the simulated attacker activity for that category.
+2. **Realistic benign lookalike behavior** — legitimate operational commands that resemble the malicious activity closely enough to make it blend in.
+
+The goal is to produce process-command datasets where **malicious commands are hidden inside legitimate operational noise**. The tool should *not* generate random, obviously-malicious attack strings. It should generate realistic command-line telemetry where the malicious story is coherent, but the surrounding benign activity makes automated detection harder.
+
+> **Safety boundary (applies to every category below):** all categories are for **simulated process-command telemetry only**. The project must not execute commands, perform real exploitation, access real credentials, generate real network activity, or carry out any real attack. Commands are represented as **text rows in a CSV only**.
+
+### Supported categories
+
+#### 1. `ransomware`
+- **Malicious behavior:** mass file archiving, encryption-like behavior, or destructive preparation activity hidden among legitimate backup and maintenance commands.
+- **Benign lookalike:** standard system backups, log rotation, archive creation, compression jobs, and storage maintenance.
+
+#### 2. `lateral_movement`
+- **Malicious behavior:** remote process execution patterns or remote administration-like commands that simulate movement between systems.
+- **Benign lookalike:** legal IT mass deployments, remote software installation, enterprise administration, and fleet management tasks.
+
+#### 3. `persistence`
+- **Malicious behavior:** creation or modification of scheduled tasks, services, startup items, cron jobs, or other mechanisms that simulate attacker persistence.
+- **Benign lookalike:** legal software updates, monitoring agents, backup cron jobs, package maintenance, and recurring administrative tasks.
+
+#### 4. `credential_dumping`
+- **Malicious behavior:** suspicious copying or access to sensitive authentication-related files, registry-like locations, browser databases, or credential storage artifacts.
+- **Benign lookalike:** standard administrative backup tasks, migration scripts, profile backup jobs, system state backups, and compliance inventory collection.
+
+#### 5. `reverse_shell`
+- **Malicious behavior:** suspicious interactive shell behavior, shell pipes, redirection, or encoded command execution that simulates attacker-controlled command execution.
+- **Benign lookalike:** legitimate automated DevOps remoting, CI/CD shell automation, remote health checks, and scripted maintenance sessions.
+
+#### 6. `data_exfiltration`
+- **Malicious behavior:** collection, compression, staging, or simulated upload of user, application, or log data.
+- **Benign lookalike:** routine log syncing, backup uploads, observability exports, support bundles, and application diagnostics collection.
+
+#### 7. `sql_exploitation`
+- **Malicious behavior:** suspicious operating-system commands spawned in a database context, or commands that simulate abuse of database maintenance features.
+- **Benign lookalike:** heavy database routine maintenance, backups, migrations, indexing jobs, exports, imports, and administrative scripts.
+
+#### 8. `crypto_miner`
+- **Malicious behavior:** background heavy-compute activity hidden under generic process names, long-running loops, or suspicious worker-like execution.
+- **Benign lookalike:** QA stress testing, performance benchmarks, load testing, build jobs, analytics processing, and legitimate high-CPU maintenance.
+
+#### 9. `privilege_escalation`
+- **Malicious behavior:** commands that simulate attempts to gain elevated permissions, abuse service configuration, use administrative override mechanisms, or exploit weak local configuration.
+- **Benign lookalike:** legal administrative overrides, service repair, permission fixes, emergency maintenance, and approved IT troubleshooting.
+
+#### 10. `defense_evasion`
+- **Malicious behavior:** commands that simulate altering logs, security controls, firewall settings, service configuration, or monitoring behavior to avoid detection.
+- **Benign lookalike:** corporate-wide official security policy updates, firewall rule deployments, logging configuration changes, endpoint management, and authorized hardening tasks.
+
+### Design rules
+
+- **Pair malicious categories with their benign lookalikes.** For every malicious category the user selects, the dataset composer should try to include the related benign lookalike categories in the 200 benign rows. This makes the dataset more realistic and prevents the Blue Team from relying on simple process-name or keyword matching.
+- **The CSV generator receives counts, not command text.** The generator should receive category counts (not raw command strings), pull matching command rows from the command database, validate the final label split, and produce the final CSV files.
+
+---
+
+## 12. Example Request Shape
 
 In plain English, the CSV generator should expect a request that contains:
 
@@ -208,6 +268,6 @@ The generator uses these counts to pull the right commands from the database, va
 
 ---
 
-## 12. Demo Pitch Summary
+## 13. Demo Pitch Summary
 
 > **AttackGen** generates realistic process-command telemetry for a requested attack scenario. It composes exactly 20 malicious commands into about 200 benign operational commands, validates the CSV format, exports the labeled dataset and ground truth, and provides an attack story for the Red Team presentation.
