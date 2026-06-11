@@ -89,3 +89,49 @@ def sample_candidates(
     for i, c in enumerate(out, start=1):
         c["id"] = i
     return out
+
+
+def finalize_selection(
+    mal_ids: List[int],
+    ben_ids: List[int],
+    candidates: List[Dict],
+    *,
+    mal_target: int,
+    ben_target: int,
+) -> tuple:
+    """Resolve Claude's id picks into rows, fixing count/label mistakes.
+
+    Keeps valid picks in the order Claude gave (story order matters for the
+    malicious list), drops invalid/duplicate/wrong-label ids, trims extras, and
+    backfills shortfalls from unused same-label candidates. Raises PickerError
+    only when the candidate pool itself can't satisfy the targets.
+    """
+    by_id = {c["id"]: c for c in candidates}
+
+    def resolve(ids: List[int], label: str, target: int, used: set) -> List[Dict]:
+        rows: List[Dict] = []
+        for i in ids:
+            c = by_id.get(i)
+            if c is None or c["label"] != label or i in used:
+                continue
+            used.add(i)
+            rows.append(c)
+            if len(rows) == target:
+                break
+        if len(rows) < target:
+            for c in candidates:
+                if c["label"] == label and c["id"] not in used:
+                    used.add(c["id"])
+                    rows.append(c)
+                    if len(rows) == target:
+                        break
+        if len(rows) < target:
+            raise PickerError(
+                f"pool has only {len(rows)} {label} candidates, need {target}"
+            )
+        return rows
+
+    used: set = set()
+    mal = resolve(mal_ids, "malicious", mal_target, used)
+    ben = resolve(ben_ids, "benign", ben_target, used)
+    return mal, ben

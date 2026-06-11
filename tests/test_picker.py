@@ -64,3 +64,44 @@ def test_load_pool_csv_skips_malformed(tmp_path):
     rows = picker.load_pool_csv(p)
     assert len(rows) == 2
     assert {r["label"] for r in rows} == {"benign", "malicious"}
+
+
+def _cands(n_mal, n_ben):
+    cands = []
+    i = 1
+    for _ in range(n_mal):
+        cands.append({"id": i, "process_name": "bash", "command_line": f"m{i}",
+                      "label": "malicious", "attack_type": "ransomware"})
+        i += 1
+    for _ in range(n_ben):
+        cands.append({"id": i, "process_name": "bash", "command_line": f"b{i}",
+                      "label": "benign", "attack_type": "ransomware"})
+        i += 1
+    return cands
+
+
+def test_finalize_happy_path():
+    cands = _cands(5, 8)
+    mal, ben = picker.finalize_selection([1, 2, 3], [6, 7, 8, 9], cands,
+                                         mal_target=3, ben_target=4)
+    assert [r["command_line"] for r in mal] == ["m1", "m2", "m3"]
+    assert len(ben) == 4 and all(r["label"] == "benign" for r in ben)
+
+
+def test_finalize_backfills_and_trims():
+    cands = _cands(5, 8)
+    # too few malicious (and one wrong-label id), too many benign
+    mal, ben = picker.finalize_selection([1, 6], [6, 7, 8, 9, 10, 11], cands,
+                                         mal_target=3, ben_target=4)
+    assert len(mal) == 3 and all(r["label"] == "malicious" for r in mal)
+    assert mal[0]["command_line"] == "m1"  # valid pick kept first
+    assert len(ben) == 4
+    # ids appear once across both lists
+    all_ids = [r["id"] for r in mal + ben]
+    assert len(all_ids) == len(set(all_ids))
+
+
+def test_finalize_raises_when_insufficient():
+    cands = _cands(2, 8)
+    with pytest.raises(picker.PickerError):
+        picker.finalize_selection([1], [3, 4], cands, mal_target=3, ben_target=4)
